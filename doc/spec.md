@@ -102,7 +102,7 @@ a better take on Scala's case-classes:
     
     object Finder {
 
-      define find: xs [List[A]] => Maybe[A] using: f (A => Bool) =
+      define find: xs [List[A]] using: f (A => Bool) => Maybe[A]  =
         match xs
         | nil              -> Nothing
         | head: x tail: ys -> (f x) then: (Just x)
