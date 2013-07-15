@@ -29,7 +29,7 @@ means the main building blocks we've got are classes:
 
     object World {
       value io: import "io"
-      define main: args Array[String] => Unit = io print "Hello, world"
+      define main: args Array[String] => Unit = io print: "Hello, world"
     }
 
     λ> harmonia hello-world.harm --entry-point World
@@ -106,7 +106,7 @@ a better take on Scala's case-classes:
         match xs
         | nil              -> Nothing
         | head: x tail: ys -> (f x) then: (Just x)
-                                    else: Finder find: ys using: f
+                                    else: (Finder find: ys using: f)
         
     }
 
