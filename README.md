@@ -50,5 +50,3 @@ of Clojure into the table. That's it.
 ## License
 
 MIT/X11. ie.: enjoy it to your heart's and pocket's contents, sir.
-
-Distributed under the Eclipse Public License, the same as Clojure.
