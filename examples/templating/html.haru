@@ -1,0 +1,66 @@
+-- We need to generate a webpage that'll be used for presenting TODO
+-- items, considering that it needs to:
+--
+-- 1) Be simple and easy enough to be used by non-programmers (e.g.:
+--    Designers)
+--
+-- 2) Be typesafe, and disallow badly formed documents to be
+--    constructed.
+
+---- The DSL -----------------------------------------------------------
+--
+-- We start by modelling the DSL that'll provide the basis for
+-- generating the HTML document. For conciseness of this example, we
+-- work with a rather restricted set of elements and rules.
+--
+
+trait Html {
+  as-string ^String.
+}
+
+trait Element[A, B] deriving Html {
+  tag ^String.
+  children ^List[A].
+  parent ^Maybe[B].
+  as-string = "<`tag`>`children`</`tag`>"
+              where: (| 
+                        #tag      => xml encode-entity: tag,
+                        #children => children map: { _ as-string } >> join: ""
+                      |).
+}
+
+trait Node deriving Html {
+  parent ^Maybe[Element].
+}
+
+trait Flow deriving Element[Flow | Node, Block].
+
+trait Block deriving Element[Block | Flow | Node, Block].
+
+class Text: s ^String deriving Node, Html {
+  parent = Nothing.
+  as-string = xml encode-entity: s.
+}
+
+class List: xs ^List[ListItem] deriving Block {
+  tag: "ul".
+  children: xs.
+}
+
+class ListItem: xs ^List[Flow | Node] deriving Flow {
+  tag: "li".
+  children: xs.
+}
+
+
+---- The usage ---------------------------------------------------------
+--
+-- We write a simple webpage with these models.
+--
+
+class TodoList: xs ^List[String] {
+  as-string = List: (xs map: { ListItem: (Text: _) }) >> as-string.
+}
+
+TodoList: [ "First thing", "Second thing", "Third thing" ] >> as-string.
+-- > <ul><li>First thing</li><li>Second thing</li><li>Third thing</li></ul>
