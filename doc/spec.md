@@ -5,110 +5,128 @@ This is a draft of the Harmonia's language specification.
 
 Some features:
 
-  - Rich static type system (yay generics!)
+  - Rich static type system (parametric types, row polymorphism)
   - Safe: hosted, no null, no pointers, immutability by default
   - Ubiquitous: compile to JS, run everywhere
-  - Object oriented by way of Smalltalk (everything is a message)
-  - Sane multiple inheritance with traits
-  - Functional: first-class functions, HOFs and all that
-  - Meta-programming: compile-time macros (?)
+  - Object oriented with structural typing and multi-methods.
+  - Functional: first-class functions, HOFs, currying by default.
+  - Compile-time meta programming.
   - Explicit parametrised dependencies.
 
 
 
-## 0) Prelude
+## 0) Motivation
+
+Harmonia is a programming language focused on writing programming
+languages. We believe that the best way of solving problems is to have
+not one generic purpose programming language, but several little domain
+specific ones.
+
+A common problem with domain specific languages is that they usually
+can't talk to one another, so instead Harmonia provides the necessary
+core primitives for shaping the language into several DSELs, which then
+allow these languages to inter-operate, using the same semantics.
+
 
 ## 1) Overview of Harmonia
 
-Harmonia is an object oriented/functional hybrid programming language, with a
-rich static type system to aid the programmer in his quest for writing awesome
-— and safe, and fast! — web applications.
+Harmonia is an programming language supporting both object-oriented and
+functional programming idioms. It provides a rich static type system to
+aid the programmer enforcing compositional constraints, and keeping
+their code modular.
 
-Despite compiling down to JavaScript, Harmonia is a classical language, that
-means the main building blocks we've got are classes:
 
-    object World {
-      value io: import "io"
-      define main: args Array[String] => Unit = io print: "Hello, world"
-    }
+    (- [String] -> IO Unit -)
+    main: args = ("Hello, " ++ args first) print
 
-    λ> harmonia hello-world.harm --entry-point World
+    λ> harmonia hello-world.harm
 
-Except for the entry-point object (which gets access to the Lobby by default),
-objects in your application only get access to the things you give them access
-to.
 
-> By the way, the `object` is just a nice way to get a singleton class. We'll
-> give you a World class an an instance of it automagically! Of course, the
-> `class` declaration works as expectedly. And yes, this is a Scala rip-off :D
+The language uses a Smalltalk-inspired syntax, with a certain influence
+of Haskell and Lisps as well. Multi-methods are the bread and butter of
+the language, and allow generic computations to be expressed with ease.
+
+   
+    data Maybe a = Nothing | Just: a
+
+    Nothing map: f = Nothing
+    (Just: a) map: f = Just: (f apply: a)
+
+
+More complex objects are represented by
+[extensible records with scoped labels](http://research.microsoft.com/pubs/65409/scopedlabels.pdf),
+and methods on these objects are defined structurally through
+row-polymorphism:
+
+
+    type Named a = { a | name: String }
+
+    alice = { name = "Alice P. Hacker", age = 12 }
+
+    (- Named a -> String -)
+    this first-name = this.name words first
+
+    main: _ = alice first-name print  -- > "Alice"
+
+    
+Modules are similar to ML's, where you have signatures and
+implementations. Modules can access anything in the lexical scope, and
+are parametric for implementation details. No module but the main one
+has access to the lobby, it's impossible for one module to load other
+modules, unless you explicitly allow them to do that. This improves
+security by capability, and allows Harmonia to be used for things like
+configuration files without worrying about what those files can do.
+
+
+    signature Set where
+      type Element
+      type Set
+      empty -> Set
+      Set add: Element -> Set
+      Element is-member-of: Set -> Boolean
+
+
+    module Set for: Element implementing Set where
+      type Set = [Element]
+
+      empty = []
+
+      [] add: x = [x]
+      (y . ys) add: x = given
+                        | x == y    => y . ys
+                        | x < y     => x . y . ys
+                        | otherwise => y . (ys add: x)
+
+      x is-member-of: [] = false
+      x is-member-of: (y . ys) = (y == x) or: (y < x and: (x is-member-of: ys))
+
+
+    module IntSet = Set for: Int
+    open IntSet
+    
+    empty add: 1 |> add: 2 |> add: 3
+
+
 
 As it is to be expected of a functional language, Harmonia has closures in the
 same fashion as JS does. And you get a nice syntax for creating anonymous
 functions:
 
-    [-2, -1, 0, 1, 2] filter: { x | x ≥ 0 }
-    --> [1, 2]
-    
+
+    [-2, -1, 0, 1, 2] filter: #(_ >= 0)                 -- short form
+    [-2, -1, 0, 1, 2] filter: function x = x >= 0       -- long form
+    -- > [1, 2]
+
+
 And, yes! Unicode symbols are a go in your message names. Do note, however,
 that Harmonia has no concepts of precedence between operators, so you have to
 group the expressions yourself:
 
-    6 - 2 * 2   --> 8
-    6 - (2 * 2) --> 2
+    6 - 2 * 2   -- > 8
+    6 - (2 * 2) -- > 2
     
 > Oh, did I tell you that you can use scheme-like symbols? Like: `is-number?`?
 > Because you **TOTALLY CAN** :)
-
-Traits allow you to get awesome multiple inheritance, and are where you should
-put your reusable functionality. Think about them as classes that define how
-they can be combined:
-
-    trait Semi-Group[A] {
-      define concat: other A => A
-    }
-
-A class including a trait must define all of the fields that a trait expects
-(do note that traits can include an implementation of a particular field):
-
-    class Promise[A] fork: (A => Promise[Either[B, C]])
-    <: Semi-Group[A], Monoid[A], Functor[A], Monad[A] {
-
-      :: Semi-Group[A]
-      define concat: other A => A =
-        chain: { a | other chain: { b | Promise[Array[A]] of: [a, b] }}
-
-      -- ( ... )
-
-    }
-
-Besides `define`, you also get `override`, `expect`, `rename` & `map`. For
-example, you could use `map` to transform a given trait's definition:
-
-
-    object Auth {
-      define ensure-permissions: f Function[Path, Boolean] =
-        { p Path | User has-permission? then: (f call: p) }
-    }
-
-    class AuthenticatedRoute <: Route {
-      map accept: p Path => Boolean = Auth ensure-permissions
-    }
-
-Last, but not least, you can encode algebraic datatypes through types. This is
-a better take on Scala's case-classes:
-
-    type List[A] = head: A tail: List[A]
-                 | nil
-    
-    object Finder {
-
-      define find: xs [List[A]] using: f (A => Bool) => Maybe[A]  =
-        match xs
-        | nil              -> Nothing
-        | head: x tail: ys -> (f x) then: (Just x)
-                                    else: (Finder find: ys using: f)
-        
-    }
 
 
 ## 2) Concepts
