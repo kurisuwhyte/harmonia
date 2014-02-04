@@ -43,7 +43,7 @@ module Doors for: Platform where
             deriving (Show)
 
   {- [Door] -}
-  doors = 1 ... 100 map: #state
+  doors = 1 ... 100 map: state
 
   {- Int -> Door -}
   n state = (n square-root == n square-root round)
