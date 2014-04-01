@@ -19,38 +19,25 @@
 -- OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 -- WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
--- The 100 doors problem.
---
--- You have 100 doors in a row that are all initially closed.  You make
--- 100 passes by the doors.  The first time through, you visit every
--- door and toggle the door (if the door is closed, you open it; if it
--- is open, you close it).  The second time you only visit every second
--- door (door #2, #4, #6, ...).  The third time, every third door, and 
--- so on, and so forth, until you only visit the 100th door.
---
--- What state are the doors in after the last pass? Which ones are 
--- open, which ones are closed?
---
--- This implementation uses the observation that after the last pass, 
--- the only doors left open are those for which their numbers are 
--- perfect squares of integers.
+module Boolean where
+  
+  data Boolean = False | True
+                 deriving (Show, Read, Ord, Eq)
 
-{- Prelude -> Doors -}
-module Doors for: Platform where
+  {- Boolean -> Boolean -> Boolean -}
+  True  /\ True  = True
+  _     /\ False = False
+  False /\ _     = False
 
-  open Platform IO expose print
+  {- Boolean -> Boolean -> Boolean -}
+  True  \/ _ = True
+  _ \/ True  = True
+  _     \/ _ = False
 
+  {- Boolean -> (Unit -> a) -> (Unit -> a) -> a -}
+  True  then: f else: f = f apply
+  False then: f else: g = g apply
 
-  data Door = Open | Closed
-            deriving (Show)
-
-  {- [Door] -}
-  doors = 1 ... 100 map: state
-
-  {- Int -> Door -}
-  n state = (n square-root == n square-root round)
-            then: Open
-            else: Closed
-
-  {- [String] -> IO Unit -}
-  main: args = 1 ... 100 zip: doors |> print
+  {- Boolean -> Boolean -}
+  True  not = False
+  False not = True

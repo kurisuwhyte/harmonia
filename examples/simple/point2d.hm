@@ -1,0 +1,7 @@
+module World for: rw where
+  (- Int -> Int -> Point -)
+  module Point x: a y: b where
+    Point print = "(#{a}, #{b})"
+    Point x = a
+    Point y = b
+
