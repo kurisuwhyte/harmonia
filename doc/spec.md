@@ -9,7 +9,7 @@ Some features:
   - Safe: hosted, no null, no pointers, immutability by default
   - Ubiquitous: compile to JS, run everywhere
   - Object oriented with structural typing and multi-methods.
-  - Functional: first-class functions, HOFs, currying by default.
+  - Functional: first-class functions, HOFs.
   - Compile-time meta programming.
   - Explicit parametrised dependencies.
 
@@ -47,11 +47,11 @@ programming language design: first-class and higher-order functions,
 static polymorphic typing (parametric and structural, via
 row-polymorphism), user-defined algebraic datatypes, pattern matching,
 multi-methods, extensible records with scoped labels, a rich module
-system (by way of ML), and compile-time macros.
+system (by way of ML, Scala and Newspeak), and compile-time macros.
 
 The language is influenced by several modern programming languages, such
-as Haskell, Standard ML, Elm, Self, Dylan, Clojure, Magpie, and
-Racket. While the syntax is a mixture of Smalltalk and Haskell, the
+as Haskell, Newspeak, Standard ML, Elm, Self, Dylan, Clojure, Magpie,
+and Racket. While the syntax is a mixture of Smalltalk and Haskell, the
 semantics are mostly derived from Lisp and ML. Particularly, Harmonia
 prefers constructs that are easier to optimise and reason about given a
 static type system, and so uses strict evaluation semantics.
@@ -61,7 +61,7 @@ informal description of the semantics for the constructs in the
 language.
 
 
-## 1.1) Program structure
+### 1.1) Program structure
 
 Harmonia's programs are structured in terms of modules, which capture
 the idea of grouping logical functionality together to construct
@@ -79,7 +79,7 @@ multi-methods, and expression-level constructs such as `let` and
 `where`.
 
 
-## 1.2) Values and types
+### 1.2) Values and types
 
 Every expression evaluates to a value, and has an associated static
 type. Values and types do not share the same namespace in Harmonia, and
@@ -89,7 +89,7 @@ polymorphism, row polymorphism, and ad-hoc polymorphism through
 multi-methods.
 
 
-## 1.3) Namespaces
+### 1.3) Namespaces
 
 ( ... )
 
@@ -117,7 +117,7 @@ The productions are expressed in the form:
 Harmonia supports the Unicode character set, and implementations are
 expected to properly support this.
 
-## 2.1) Comments
+### 2.1) Comments
 
 ```hs
 comment      = lexeme-break "--" lexeme-break <any>* new-line
@@ -143,7 +143,7 @@ Haskell, where a character preceding or following two consecutive dashes
 makes it not a comment only if it would form a valid lexeme.
 
 
-## 2.2) Identifiers and operators
+### 2.2) Identifiers and operators
 
 ```hs
 reserved = "data"
@@ -166,125 +166,48 @@ reserved = "data"
          | "|"
          | "|>"
          | "<|"
-         
-
-variable = small 
 ```
-    
 
+(...)
 
-## 1) Overview of Harmonia
+### 2.2) Numeric literals
 
-Harmonia is an programming language supporting both object-oriented and
-functional programming idioms. It provides a rich static type system to
-aid the programmer enforcing compositional constraints, and keeping
-their code modular.
+(...)
 
+### 2.3) String literals
 
-    (- [String] -> IO Unit -)
-    main: args = ("Hello, " ++ args first) print
+(...)
 
-    λ> harmonia hello-world.harm
+### 2.4) Block structure
 
+(...)
 
-The language uses a Smalltalk-inspired syntax, with a certain influence
-of Haskell and Lisps as well. Multi-methods are the bread and butter of
-the language, and allow generic computations to be expressed with ease.
+## 3) Concepts
 
-   
-    data Maybe a = Nothing | Just: a
+### 3.1) The language kernel
 
-    Nothing map: transform = Nothing
-    (Just: a) map: transform = Just: (a transform)
+At the core, Harmonia is a pure functional language not far from lambda
+calculus: lambda abstraction, application, pre-defined data types, user-defined
+data types (no deriving).
 
+### 3.2) Failure handling
 
-More complex objects are represented by
-[extensible records with scoped labels](http://research.microsoft.com/pubs/65409/scopedlabels.pdf),
-and methods on these objects are defined structurally through
-row-polymorphism:
+Introduces exceptions and exception handling.
 
+(TODO: needs moar research)
 
-    type Named a = { a | name: String }
+### 3.3) Object orientation
 
-    alice = { name = "Alice P. Hacker", age = 12 }
+Introduces multi-methods and first-class parametric modules.
 
-    (- Named a -> String -)
-    this first-name = this.name words first
+### 3.4) Concurrency
 
-    main: _ = alice first-name print  -- > "Alice"
+Introduces CSP as a model for (non-deterministic) concurrency.
 
-    
-Modules are similar to ML's, where you have signatures and
-implementations. Modules can access anything in the lexical scope, and
-are parametric for implementation details. No module but the main one
-has access to the lobby, it's impossible for one module to load other
-modules, unless you explicitly allow them to do that. This improves
-security by capability, and allows Harmonia to be used for things like
-configuration files without worrying about what those files can do.
+### 3.5) Syntactic abstraction
 
-
-    module set-signature where
-      type Element
-      type Set
-      empty -> Set
-      Set add: Element -> Set
-      Element is-member-of: Set -> Boolean
-
-    module set for: Element with [set-signature] where
-      type Set = [Element]
-
-      empty = []
-
-      [] add: x = [x]
-      (y . ys) add: x = given
-                          | x == y    => y . ys
-                          | x < y     => x . y . ys
-                          | otherwise => y . (ys add: x)
-
-      x is-member-of: [] = false
-      x is-member-of: (y . ys) = y == x or: (y < x and: (x is-member-of: ys))
-
-
-    module int-set = set for: Int
-    open int-set
-    
-    empty add: 1 |> add: 2 |> add: 3
-
-
-
-As it is to be expected of a functional language, Harmonia has closures in the
-same fashion as JS does. And you get a nice syntax for creating anonymous
-functions:
-
-
-    [-2, -1, 0, 1, 2] filter: #(_ >= 0)                 -- short form
-    [-2, -1, 0, 1, 2] filter: function x = x >= 0       -- long form
-    -- > [1, 2]
-
-
-And, yes! Unicode symbols are a go in your message names. Do note, however,
-that Harmonia has no concepts of precedence between operators, so you have to
-group the expressions yourself:
-
-    6 - 2 * 2   -- > 8
-    6 - (2 * 2) -- > 2
-    
-> Oh, did I tell you that you can use scheme-like symbols? Like: `is-number?`?
-> Because you **TOTALLY CAN** :)
-
-
-## 2) Concepts
-
-
-
-
-## 3) Program structure
+Macros.
 
 ## 4) Standard library
 
-## 5) Supporting tools
-
-## 6) Formal syntax
-
-## 7) Formal semantics
-
+## 5) Formal syntax
