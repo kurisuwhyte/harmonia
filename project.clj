@@ -3,4 +3,5 @@
   :url "https://github.com/kurisuwhyte/harmonia"
   :license {:name "MIT"
             :url "http://opensource.org/licenses/MIT"}
-  :dependencies [[org.clojure/clojure "1.4.0"]])
+  :dependencies [[org.clojure/clojure "1.4.0"]
+                 [instaparse "1.3.1"]])
